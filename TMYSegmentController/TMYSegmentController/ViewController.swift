@@ -22,6 +22,7 @@ class ViewController: UIViewController {
     private let timeLabel = UILabel()
     private let slider = UISlider()
     private var sliding = false
+    private var link: CADisplayLink?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -33,7 +34,7 @@ class ViewController: UIViewController {
             fatalError("链接错误")
         }
         playItem = AVPlayerItem(url: url)
-        playItem?.addObserver(self, forKeyPath: "CMTime", options: .new, context: nil)
+        playItem?.addObserver(self, forKeyPath: "loadTimeRanges", options: .new, context: nil)
         playItem?.addObserver(self, forKeyPath: "status", options: .new, context: nil)
         
         player = AVPlayer(playerItem: playItem)
@@ -58,8 +59,8 @@ class ViewController: UIViewController {
         }
         view.addSubview(timeLabel)
         
-        let link = CADisplayLink(target: self, selector: #selector(update))
-        link.add(to: RunLoop.main, forMode: .defaultRunLoopMode)
+        link = CADisplayLink(target: self, selector: #selector(update))
+        link?.add(to: RunLoop.main, forMode: .defaultRunLoopMode)
         
         slider.do {
             $0.minimumValue = 0
@@ -129,14 +130,23 @@ class ViewController: UIViewController {
         }
     }
     
+    override func viewDidDisappear(_ animated: Bool) {
+        print("video is viewDidDisappear or not")
+        link?.invalidate()//退出页面的时候需停止CADisplayLink 避免循环引用
+        link = nil
+    }
+    
     deinit {
+        print("video is deinit or not")
         playItem?.removeObserver(self, forKeyPath: "loadTimeRanges")
         playItem?.removeObserver(self, forKeyPath: "status")
+        playItem = nil
+        playLayer = nil
+        player = nil
     }
     
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
     }
 
 
